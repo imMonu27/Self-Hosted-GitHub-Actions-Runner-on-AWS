@@ -1,0 +1,28 @@
+name: Self-hosted Runner Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-versions:
+    name: Check CLI tool versions
+    runs-on: [self-hosted, dhx-runbook-runner-i-0d39bc06c08f1f906]
+
+    steps:
+      - name: Check Terragrunt version
+        run: terragrunt -v
+
+      - name: Check Terraform version
+        run: terraform -v
+
+      - name: Check OpenVPN version
+        run: openvpn --version | head -n 1
+
+      - name: Check Go version
+        run: go version
+
+      - name: Check Python version
+        run: python3 --version
+
+      - name: Check Kubectl version
+        run: kubectl version --client
