@@ -1,0 +1,64 @@
+{
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "region": "us-east-1",
+            "source_ami_filter": {
+                "filters": {
+                    "name": "al2023-ami-*-x86_64",
+                    "virtualization-type": "hvm",
+                    "architecture": "x86_64",
+                    "root-device-type": "ebs"
+                },
+                "owners": [
+                    "amazon"
+                ],
+                "most_recent": true
+            },
+            "instance_type": "t3.small",
+            "iam_instance_profile": "ssm-instance-profile",
+            "communicator": "ssh",
+            "ssh_username": "ec2-user",
+            "ami_name": "github-self-hosted-runner-ami-{{timestamp}}",
+            "ami_block_device_mappings": [
+                {
+                    "device_name": "/dev/xvda",
+                    "volume_size": 100,
+                    "volume_type": "gp2",
+                    "delete_on_termination": true
+                }
+            ]
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+                "set -euxo pipefail",
+                "# Install essential packages",
+                "sudo dnf install -y yum-utils python3 git wget unzip tar jq openvpn",
+                "# Install Terraform",
+                "curl -o terraform.zip https://releases.hashicorp.com/terraform/1.8.4/terraform_1.8.4_linux_amd64.zip",
+                "unzip terraform.zip && sudo mv terraform /usr/local/bin/",
+                "# Install Terragrunt",
+                "sudo curl -Lo /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_amd64",
+                "sudo chmod +x /usr/local/bin/terragrunt",
+                "# Install kubectl",
+                "curl -LO https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl",
+                "sudo chmod +x kubectl && sudo mv kubectl /usr/local/bin/",
+                "# Install Go",
+                "wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz",
+                "sudo tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz",
+                "echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee -a /etc/profile",
+                "# GitHub Actions Runner setup",
+                "mkdir -p /home/ec2-user/actions-runner",
+                "cd /home/ec2-user/actions-runner",
+                "curl -o actions-runner-linux-x64-2.325.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.325.0/actions-runner-linux-x64-2.325.0.tar.gz",
+                "tar xzf ./actions-runner-linux-x64-2.325.0.tar.gz",
+                "sudo dnf install -y amazon-ssm-agent",
+                "sudo systemctl enable amazon-ssm-agent",
+                "sudo systemctl start amazon-ssm-agent"
+            ]
+        }
+    ]
+}
